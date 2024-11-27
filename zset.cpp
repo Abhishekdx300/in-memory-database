@@ -54,13 +54,17 @@ ZNode *ZSet::lookup(const std::string &name)  {  // removed const
 std::unique_ptr<ZNode> ZSet::pop(const std::string &name) {
     if (!tree) return nullptr;
 
-    HashNode key;
-    key.hashcode = str_hash(reinterpret_cast<const uint8_t *>(name.data()), name.size());
+    HKey key;
+    key.node.hashcode = str_hash(reinterpret_cast<const uint8_t *>(name.data()), name.size());
 
-    HashNode *found = hmap.erase(&key, [](HashNode *node, HashNode *key) {
+    key.name = name.data();
+    key.len = name.length();
+
+
+    HashNode *found = hmap.erase(&key.node, [](HashNode *node, HashNode *key) {
         ZNode *znode = container_of(node, ZNode, hmap);
-        const auto *keyName = reinterpret_cast<const std::string *>(key);
-        return znode->name == *keyName;
+        HKey *hkey = container_of(key,HKey,node);
+        return znode->name == hkey->name; 
     });
 
     if (!found) return nullptr;
@@ -155,6 +159,3 @@ ZNode* ZSet::offset(ZNode* node, int64_t offset) const {
     AVLNode* avlNode = avl_offset(&node->tree, offset);
     return avlNode ? container_of(avlNode, ZNode, tree) : nullptr;
 }
-
-
-
